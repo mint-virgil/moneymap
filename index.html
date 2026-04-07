@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MoneyMap — Monthly Expense Optimizer</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a38;
+    --accent: #c8f04a;
+    --accent2: #4af0c8;
+    --accent3: #f04a8a;
+    --accent4: #f0a84a;
+    --text: #f0f0f8;
+    --muted: #7a7a9a;
+    --good: #4af0c8;
+    --warn: #f0a84a;
+    --bad: #f04a8a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(200,240,74,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,240,74,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* Header */
+  header {
+    padding: 40px 0 32px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 2rem;
+    letter-spacing: -0.04em;
+  }
+  .logo span { color: var(--accent); }
+
+  .tagline {
+    color: var(--muted);
+    font-size: 0.78rem;
+    margin-top: 4px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Section headings */
+  .section-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.3rem;
+    margin-bottom: 20px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: #3a3a50; }
+
+  /* Salary input */
+  .salary-block {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  @media(max-width:600px){ .salary-block { grid-template-columns: 1fr; } }
+
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-group label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  input[type="text"], input[type="number"], select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.95rem;
+    padding: 10px 14px;
+    width: 100%;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    -moz-appearance: textfield;
+  }
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(200,240,74,0.12);
+  }
+  select option { background: var(--surface2); }
+
+  /* Expense rows */
+  .expenses-table { width: 100%; border-collapse: collapse; }
+  .expenses-table th {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .expense-row {
+    display: grid;
+    grid-template-columns: 2fr 1.2fr 1fr 1fr 36px;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(42,42,56,0.5);
+    animation: slideIn 0.25s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @media(max-width:700px){
+    .expense-row { grid-template-columns: 1fr 1fr; gap: 6px; }
+    .expense-row .col-priority { display: none; }
+  }
+
+  .expense-row input, .expense-row select {
+    font-size: 0.85rem;
+    padding: 8px 10px;
+  }
+
+  .category-tag {
+    display: inline-block;
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+  .cat-housing    { background: rgba(74,144,240,0.15); color: #4a90f0; }
+  .cat-transport  { background: rgba(240,168,74,0.15); color: var(--accent4); }
+  .cat-food       { background: rgba(200,240,74,0.15); color: var(--accent); }
+  .cat-debt       { background: rgba(240,74,138,0.15); color: var(--bad); }
+  .cat-lifestyle  { background: rgba(74,240,200,0.15); color: var(--accent2); }
+  .cat-insurance  { background: rgba(180,74,240,0.15); color: #b44af0; }
+  .cat-savings    { background: rgba(74,240,74,0.15); color: #4af074; }
+  .cat-other      { background: rgba(120,120,140,0.15); color: var(--muted); }
+
+  .btn-remove {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    height: 32px; width: 32px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .btn-remove:hover { border-color: var(--bad); color: var(--bad); background: rgba(240,74,138,0.08); }
+
+  /* Add row button */
+  .btn-add {
+    background: rgba(200,240,74,0.08);
+    border: 1px dashed rgba(200,240,74,0.3);
+    border-radius: 8px;
+    color: var(--accent);
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    padding: 10px 16px;
+    width: 100%;
+    margin-top: 12px;
+    transition: all 0.2s;
+  }
+  .btn-add:hover { background: rgba(200,240,74,0.14); border-color: rgba(200,240,74,0.6); }
+
+  /* Primary button */
+  .btn-primary {
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #0a0a0f;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+    padding: 14px 32px;
+    transition: all 0.2s;
+    margin-top: 24px;
+  }
+  .btn-primary:hover { background: #d8ff5a; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(200,240,74,0.25); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    padding: 14px 24px;
+    margin-top: 24px;
+    margin-left: 12px;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--muted); color: var(--text); }
+
+  /* Results */
+  #results { display: none; }
+  #results.visible { display: block; animation: fadeUp 0.4s ease; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .stat-card.green::before  { background: var(--good); }
+  .stat-card.yellow::before { background: var(--accent); }
+  .stat-card.red::before    { background: var(--bad); }
+  .stat-card.blue::before   { background: #4a90f0; }
+
+  .stat-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.9rem;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  .stat-value.green  { color: var(--good); }
+  .stat-value.yellow { color: var(--accent); }
+  .stat-value.red    { color: var(--bad); }
+  .stat-value.blue   { color: #4a90f0; }
+  .stat-sub { font-size: 0.72rem; color: var(--muted); margin-top: 6px; }
+
+  /* Budget bar */
+  .budget-bar-wrap { margin: 24px 0; }
+  .budget-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .budget-bar {
+    height: 10px;
+    background: var(--surface2);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  .budget-bar-fill {
+    height: 100%;
+    border-radius: 20px;
+    transition: width 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+    background: linear-gradient(90deg, var(--good), var(--accent));
+  }
+  .budget-bar-fill.warn { background: linear-gradient(90deg, var(--accent), var(--warn)); }
+  .budget-bar-fill.danger { background: linear-gradient(90deg, var(--warn), var(--bad)); }
+
+  /* Breakdown table */
+  .breakdown-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  .breakdown-table th {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .breakdown-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(42,42,56,0.4);
+    vertical-align: middle;
+  }
+  .breakdown-table tr:last-child td { border-bottom: none; }
+  .breakdown-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .pct-bar {
+    height: 4px;
+    border-radius: 4px;
+    background: var(--accent);
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 8px;
+    transition: width 0.6s ease;
+  }
+
+  /* Recommendations */
+  .rec-list { display: flex; flex-direction: column; gap: 12px; }
+  .rec-item {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 16px 18px;
+    border-left: 3px solid transparent;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .rec-item.priority-high   { border-color: var(--bad); }
+  .rec-item.priority-medium { border-color: var(--warn); }
+  .rec-item.priority-low    { border-color: var(--good); }
+
+  .rec-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 2px; }
+  .rec-title { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
+  .rec-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.6; }
+  .rec-saving {
+    font-size: 0.72rem;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 6px;
+    display: inline-block;
+  }
+  .rec-saving.high   { background: rgba(240,74,138,0.15); color: var(--bad); }
+  .rec-saving.medium { background: rgba(240,168,74,0.15); color: var(--warn); }
+  .rec-saving.low    { background: rgba(74,240,200,0.15); color: var(--good); }
+
+  /* Debt strategy */
+  .debt-strategy {
+    background: rgba(240,74,138,0.06);
+    border: 1px solid rgba(240,74,138,0.2);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .debt-strategy h4 { font-family: 'Syne', sans-serif; font-weight: 700; margin-bottom: 6px; color: var(--bad); }
+  .debt-strategy p { font-size: 0.8rem; color: var(--muted); line-height: 1.7; }
+
+  /* Pie chart */
+  .chart-wrap { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+  .pie-svg { flex-shrink: 0; }
+  .legend { flex: 1; min-width: 180px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.78rem; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+  .tab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    padding: 10px 16px;
+    transition: all 0.2s;
+    margin-bottom: -1px;
+    text-transform: uppercase;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* Footer note */
+  .footer-note {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-align: center;
+    padding: 40px 0 32px;
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+    letter-spacing: 0.04em;
+  }
+
+  .highlight-box {
+    background: rgba(200,240,74,0.06);
+    border: 1px solid rgba(200,240,74,0.2);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    font-size: 0.82rem;
+    line-height: 1.7;
+    color: var(--text);
+  }
+
+  /* Currency prefix */
+  .input-prefix {
+    position: relative;
+  }
+  .input-prefix span {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 0.85rem;
+    pointer-events: none;
+  }
+  .input-prefix input { padding-left: 28px; }
+
+  .row-header {
+    display: grid;
+    grid-template-columns: 2fr 1.2fr 1fr 1fr 36px;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+  .row-header span {
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  @media(max-width:700px){
+    .row-header { grid-template-columns: 1fr 1fr; }
+    .row-header .col-priority { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="logo">Money<span>Map</span></div>
+    <div class="tagline">Monthly Expense Optimizer — Know where every rand goes</div>
+  </header>
+
+  <!-- INCOME SECTION -->
+  <div class="section-label">01 — Income</div>
+  <div class="card">
+    <div class="section-title">Your Monthly Income</div>
+    <div class="salary-block">
+      <div class="field-group">
+        <label>Gross Monthly Salary</label>
+        <div class="input-prefix">
+          <span>R</span>
+          <input type="number" id="grossSalary" placeholder="0.00" oninput="liveCalc()">
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Tax / UIF Deductions</label>
+        <div class="input-prefix">
+          <span>R</span>
+          <input type="number" id="taxDeduction" placeholder="0.00" oninput="liveCalc()">
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Other Income (side hustle, rental, etc.)</label>
+        <div class="input-prefix">
+          <span>R</span>
+          <input type="number" id="otherIncome" placeholder="0.00" oninput="liveCalc()">
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Net Take-Home (auto-calculated)</label>
+        <div class="input-prefix">
+          <span>R</span>
+          <input type="number" id="netIncome" placeholder="0.00" style="color:var(--accent); font-weight:500;" readonly>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPENSES SECTION -->
+  <div class="section-label">02 — Monthly Expenses</div>
+  <div class="card">
+    <div class="section-title">Where Your Money Goes</div>
+
+    <div class="row-header">
+      <span>Description</span>
+      <span>Category</span>
+      <span>Amount (R)</span>
+      <span class="col-priority">Priority</span>
+      <span></span>
+    </div>
+
+    <div id="expenseRows"></div>
+
+    <button class="btn-add" onclick="addRow()">＋ Add Expense</button>
+  </div>
+
+  <!-- DEBTS SECTION -->
+  <div class="section-label">03 — Debts & Loans</div>
+  <div class="card">
+    <div class="section-title">Outstanding Debts</div>
+    <div class="row-header" style="grid-template-columns: 2fr 1fr 1fr 1fr 36px;">
+      <span>Debt Name</span>
+      <span>Balance (R)</span>
+      <span>Monthly Payment</span>
+      <span>Interest %</span>
+      <span></span>
+    </div>
+    <div id="debtRows"></div>
+    <button class="btn-add" onclick="addDebtRow()">＋ Add Debt / Loan</button>
+  </div>
+
+  <div>
+    <button class="btn-primary" onclick="calculate()">▶ Optimise My Budget</button>
+    <button class="btn-secondary" onclick="loadSample()">Load Sample Data</button>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+    <br><br>
+    <div class="section-label">04 — Your Financial Overview</div>
+
+    <div class="summary-grid">
+      <div class="stat-card blue">
+        <div class="stat-label">Net Monthly Income</div>
+        <div class="stat-value blue" id="r-income">R0</div>
+        <div class="stat-sub">After tax & deductions</div>
+      </div>
+      <div class="stat-card yellow">
+        <div class="stat-label">Total Expenses</div>
+        <div class="stat-value yellow" id="r-expenses">R0</div>
+        <div class="stat-sub">All outgoings incl. debt</div>
+      </div>
+      <div class="stat-card" id="r-surplus-card">
+        <div class="stat-label">Monthly Surplus / Deficit</div>
+        <div class="stat-value" id="r-surplus">R0</div>
+        <div class="stat-sub" id="r-surplus-sub"></div>
+      </div>
+      <div class="stat-card yellow">
+        <div class="stat-label">Savings Rate</div>
+        <div class="stat-value" id="r-savings-rate">0%</div>
+        <div class="stat-sub">Target: ≥ 20%</div>
+      </div>
+    </div>
+
+    <!-- Budget bar -->
+    <div class="card">
+      <div class="budget-bar-wrap">
+        <div class="budget-bar-label">
+          <span>Expenses vs Income</span>
+          <span id="bar-pct">0% used</span>
+        </div>
+        <div class="budget-bar">
+          <div class="budget-bar-fill" id="budget-bar-fill" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('breakdown', this)">Breakdown</button>
+      <button class="tab" onclick="switchTab('chart', this)">Spending Chart</button>
+      <button class="tab" onclick="switchTab('recommendations', this)">Recommendations</button>
+      <button class="tab" onclick="switchTab('debt-plan', this)">Debt Plan</button>
+    </div>
+
+    <!-- Breakdown Tab -->
+    <div class="tab-panel active" id="tab-breakdown">
+      <div class="card">
+        <table class="breakdown-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Amount</th>
+              <th>% of Income</th>
+              <th>Benchmark</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="breakdown-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Chart Tab -->
+    <div class="tab-panel" id="tab-chart">
+      <div class="card">
+        <div class="chart-wrap">
+          <svg id="pie-chart" class="pie-svg" width="200" height="200" viewBox="0 0 200 200"></svg>
+          <div class="legend" id="pie-legend"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recommendations Tab -->
+    <div class="tab-panel" id="tab-recommendations">
+      <div class="card">
+        <div class="highlight-box" id="rec-summary"></div>
+        <div class="rec-list" id="rec-list"></div>
+      </div>
+    </div>
+
+    <!-- Debt Plan Tab -->
+    <div class="tab-panel" id="tab-debt-plan">
+      <div class="card">
+        <div id="debt-plan-content"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer-note">
+    MoneyMap — All calculations are performed locally in your browser. No data is sent anywhere. ✦
+  </div>
+</div>
+
+<script>
+  const COLORS = ['#c8f04a','#4af0c8','#f04a8a','#4a90f0','#f0a84a','#b44af0','#4af074','#f07a4a','#4ab4f0','#f04af0'];
+
+  const CATEGORIES = ['Housing','Transport','Food & Groceries','Debt Repayment','Lifestyle','Insurance','Savings','Education','Medical','Other'];
+
+  const BENCHMARKS = {
+    'Housing':         { ideal: 30, warn: 35 },
+    'Transport':       { ideal: 15, warn: 20 },
+    'Food & Groceries':{ ideal: 15, warn: 20 },
+    'Debt Repayment':  { ideal: 15, warn: 30 },
+    'Lifestyle':       { ideal: 10, warn: 15 },
+    'Insurance':       { ideal: 8,  warn: 12 },
+    'Savings':         { ideal: 20, warn: 10 },
+    'Education':       { ideal: 5,  warn: 10 },
+    'Medical':         { ideal: 5,  warn: 8  },
+    'Other':           { ideal: 5,  warn: 10 },
+  };
+
+  let expenseCount = 0;
+  let debtCount = 0;
+
+  function addRow(desc='', cat='Other', amt='', pri='medium') {
+    expenseCount++;
+    const id = expenseCount;
+    const row = document.createElement('div');
+    row.className = 'expense-row';
+    row.id = `erow-${id}`;
+    row.innerHTML = `
+      <input type="text" placeholder="e.g. Rent, Netflix…" value="${desc}" oninput="liveCalc()">
+      <select onchange="liveCalc()">
+        ${CATEGORIES.map(c=>`<option value="${c}" ${c===cat?'selected':''}>${c}</option>`).join('')}
+      </select>
+      <div class="input-prefix" style="position:relative">
+        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.8rem;pointer-events:none">R</span>
+        <input type="number" placeholder="0" value="${amt}" style="padding-left:24px" oninput="liveCalc()">
+      </div>
+      <select class="col-priority" onchange="liveCalc()">
+        <option value="essential" ${pri==='essential'?'selected':''}>Essential</option>
+        <option value="medium" ${pri==='medium'?'selected':''}>Important</option>
+        <option value="optional" ${pri==='optional'?'selected':''}>Optional</option>
+      </select>
+      <button class="btn-remove" onclick="removeRow('erow-${id}')">✕</button>
+    `;
+    document.getElementById('expenseRows').appendChild(row);
+    liveCalc();
+  }
+
+  function addDebtRow(name='', balance='', payment='', interest='') {
+    debtCount++;
+    const id = debtCount;
+    const row = document.createElement('div');
+    row.className = 'expense-row';
+    row.id = `drow-${id}`;
+    row.style.gridTemplateColumns = '2fr 1fr 1fr 1fr 36px';
+    row.innerHTML = `
+      <input type="text" placeholder="e.g. Car loan, Credit card…" value="${name}" oninput="liveCalc()">
+      <div class="input-prefix" style="position:relative">
+        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.8rem;pointer-events:none">R</span>
+        <input type="number" placeholder="0" value="${balance}" style="padding-left:24px" oninput="liveCalc()">
+      </div>
+      <div class="input-prefix" style="position:relative">
+        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.8rem;pointer-events:none">R</span>
+        <input type="number" placeholder="0" value="${payment}" style="padding-left:24px" oninput="liveCalc()">
+      </div>
+      <input type="number" placeholder="%" value="${interest}" oninput="liveCalc()">
+      <button class="btn-remove" onclick="removeRow('drow-${id}')">✕</button>
+    `;
+    document.getElementById('debtRows').appendChild(row);
+    liveCalc();
+  }
+
+  function removeRow(id) {
+    const el = document.getElementById(id);
+    if (el) { el.style.opacity='0'; el.style.transform='translateX(10px)'; el.style.transition='all .2s'; setTimeout(()=>el.remove(),200); }
+    liveCalc();
+  }
+
+  function getExpenses() {
+    const rows = document.querySelectorAll('#expenseRows .expense-row');
+    return Array.from(rows).map(r => {
+      const inputs = r.querySelectorAll('input,select');
+      return {
+        desc: inputs[0].value || 'Unnamed',
+        cat:  inputs[1].value,
+        amt:  parseFloat(inputs[2].value) || 0,
+        pri:  inputs[3]?.value || 'medium',
+      };
+    }).filter(e => e.amt > 0);
+  }
+
+  function getDebts() {
+    const rows = document.querySelectorAll('#debtRows .expense-row');
+    return Array.from(rows).map(r => {
+      const inputs = r.querySelectorAll('input');
+      return {
+        name:     inputs[0].value || 'Debt',
+        balance:  parseFloat(inputs[1].value) || 0,
+        payment:  parseFloat(inputs[2].value) || 0,
+        interest: parseFloat(inputs[3].value) || 0,
+      };
+    }).filter(d => d.balance > 0);
+  }
+
+  function fmt(n) {
+    return 'R ' + Math.abs(n).toLocaleString('en-ZA', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  function liveCalc() {
+    const gross = parseFloat(document.getElementById('grossSalary').value) || 0;
+    const tax   = parseFloat(document.getElementById('taxDeduction').value) || 0;
+    const other = parseFloat(document.getElementById('otherIncome').value) || 0;
+    const net   = gross - tax + other;
+    document.getElementById('netIncome').value = net > 0 ? net.toFixed(2) : '';
+  }
+
+  function calculate() {
+    liveCalc();
+    const net = parseFloat(document.getElementById('netIncome').value) || 0;
+    const expenses = getExpenses();
+    const debts = getDebts();
+
+    if (net === 0) { alert('Please enter your monthly income first.'); return; }
+
+    const totalDebtPayment = debts.reduce((s,d) => s + d.payment, 0);
+    const totalExpenses    = expenses.reduce((s,e) => s + e.amt, 0) + totalDebtPayment;
+    const surplus          = net - totalExpenses;
+    const savingsRate      = net > 0 ? (surplus / net) * 100 : 0;
+    const expPct           = net > 0 ? (totalExpenses / net) * 100 : 0;
+
+    // Summary stats
+    document.getElementById('r-income').textContent     = fmt(net);
+    document.getElementById('r-expenses').textContent   = fmt(totalExpenses);
+    document.getElementById('r-surplus').textContent    = fmt(surplus);
+    document.getElementById('r-savings-rate').textContent = savingsRate.toFixed(1) + '%';
+
+    const surplusCard = document.getElementById('r-surplus-card');
+    const surplusVal  = document.getElementById('r-surplus');
+    const surplusSub  = document.getElementById('r-surplus-sub');
+    if (surplus >= 0) {
+      surplusCard.className = 'stat-card green';
+      surplusVal.className = 'stat-value green';
+      surplusSub.textContent = 'You are in surplus ✓';
+    } else {
+      surplusCard.className = 'stat-card red';
+      surplusVal.className = 'stat-value red';
+      surplusSub.textContent = 'You are in deficit ✗';
+    }
+
+    const srVal = document.getElementById('r-savings-rate');
+    srVal.className = savingsRate >= 20 ? 'stat-value green' : savingsRate >= 10 ? 'stat-value yellow' : 'stat-value red';
+
+    // Budget bar
+    const fill = document.getElementById('budget-bar-fill');
+    const pct  = Math.min(expPct, 100);
+    fill.style.width = pct + '%';
+    fill.className = 'budget-bar-fill' + (pct > 90 ? ' danger' : pct > 70 ? ' warn' : '');
+    document.getElementById('bar-pct').textContent = expPct.toFixed(1) + '% of income used';
+
+    // Aggregate by category
+    const catTotals = {};
+    expenses.forEach(e => {
+      catTotals[e.cat] = (catTotals[e.cat] || 0) + e.amt;
+    });
+    if (totalDebtPayment > 0) {
+      catTotals['Debt Repayment'] = (catTotals['Debt Repayment'] || 0) + totalDebtPayment;
+    }
+
+    // Breakdown table
+    const tbody = document.getElementById('breakdown-body');
+    tbody.innerHTML = '';
+    Object.entries(catTotals).sort((a,b) => b[1]-a[1]).forEach(([cat, amt]) => {
+      const pctOfIncome = net > 0 ? (amt / net) * 100 : 0;
+      const bench = BENCHMARKS[cat] || { ideal: 10, warn: 15 };
+      let status, statusColor;
+      if (cat === 'Savings') {
+        status = pctOfIncome >= bench.ideal ? '✓ On track' : pctOfIncome >= bench.warn ? '△ Low' : '✗ Very low';
+        statusColor = pctOfIncome >= bench.ideal ? 'var(--good)' : pctOfIncome >= bench.warn ? 'var(--warn)' : 'var(--bad)';
+      } else {
+        status = pctOfIncome <= bench.ideal ? '✓ Good' : pctOfIncome <= bench.warn ? '△ Watch' : '✗ High';
+        statusColor = pctOfIncome <= bench.ideal ? 'var(--good)' : pctOfIncome <= bench.warn ? 'var(--warn)' : 'var(--bad)';
+      }
+      const barW = Math.min(pctOfIncome * 2, 80);
+      tbody.innerHTML += `
+        <tr>
+          <td>${cat}</td>
+          <td>${fmt(amt)}</td>
+          <td>
+            ${pctOfIncome.toFixed(1)}%
+            <span class="pct-bar" style="width:${barW}px"></span>
+          </td>
+          <td style="color:var(--muted); font-size:0.75rem">≤ ${bench.ideal}% ideal</td>
+          <td style="color:${statusColor}; font-size:0.78rem">${status}</td>
+        </tr>
+      `;
+    });
+
+    // Pie chart
+    renderPie(catTotals, totalExpenses);
+
+    // Recommendations
+    renderRecommendations(net, expenses, debts, catTotals, surplus, savingsRate);
+
+    // Debt plan
+    renderDebtPlan(debts, surplus);
+
+    const results = document.getElementById('results');
+    results.classList.add('visible');
+    setTimeout(() => results.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  }
+
+  function renderPie(catTotals, total) {
+    const svg = document.getElementById('pie-chart');
+    const legend = document.getElementById('pie-legend');
+    svg.innerHTML = '';
+    legend.innerHTML = '';
+
+    const entries = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
+    const cx = 100, cy = 100, r = 80;
+    let angle = -Math.PI / 2;
+
+    entries.forEach(([cat, amt], i) => {
+      const slice = total > 0 ? (amt / total) * 2 * Math.PI : 0;
+      const x1 = cx + r * Math.cos(angle);
+      const y1 = cy + r * Math.sin(angle);
+      angle += slice;
+      const x2 = cx + r * Math.cos(angle);
+      const y2 = cy + r * Math.sin(angle);
+      const large = slice > Math.PI ? 1 : 0;
+      const color = COLORS[i % COLORS.length];
+
+      if (total > 0 && slice > 0.01) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('d',`M${cx},${cy} L${x1},${y1} A${r},${r},0,${large},1,${x2},${y2} Z`);
+        path.setAttribute('fill', color);
+        path.setAttribute('stroke', '#0a0a0f');
+        path.setAttribute('stroke-width', '2');
+        svg.appendChild(path);
+      }
+
+      legend.innerHTML += `
+        <div class="legend-item">
+          <div class="legend-dot" style="background:${color}"></div>
+          <span>${cat} — ${total>0?((amt/total)*100).toFixed(1):0}%</span>
+        </div>
+      `;
+    });
+  }
+
+  function renderRecommendations(net, expenses, debts, catTotals, surplus, savingsRate) {
+    const recs = [];
+
+    // Deficit
+    if (surplus < 0) {
+      recs.push({
+        priority: 'high', icon: '🚨',
+        title: 'You Are Spending More Than You Earn',
+        desc: `You have a monthly deficit of ${fmt(Math.abs(surplus))}. This means you are going into debt every month. Immediate action is required — identify optional expenses to cut first.`,
+        saving: 'high', savingLabel: 'Critical'
+      });
+    }
+
+    // Low savings
+    if (savingsRate < 10) {
+      recs.push({
+        priority: 'high', icon: '💰',
+        title: 'Savings Rate Is Critically Low',
+        desc: `Your savings rate is ${savingsRate.toFixed(1)}%. Financial experts recommend saving at least 20% of your income (R ${(net*0.2).toFixed(2)}/month). Start small — even 5% builds an emergency fund over time.`,
+        saving: 'high', savingLabel: `Target: R ${(net*0.2).toFixed(2)}/month`
+      });
+    } else if (savingsRate < 20) {
+      recs.push({
+        priority: 'medium', icon: '📈',
+        title: 'Boost Your Savings Rate',
+        desc: `You're saving ${savingsRate.toFixed(1)}% — good start! Aim for 20% (R ${(net*0.2).toFixed(2)}/month). Review optional lifestyle expenses to find extra room.`,
+        saving: 'medium', savingLabel: `Gap: R ${Math.max(0, net*0.2 - surplus).toFixed(2)}/month`
+      });
+    }
+
+    // High housing
+    const housing = catTotals['Housing'] || 0;
+    if (net > 0 && (housing / net) > 0.35) {
+      recs.push({
+        priority: 'high', icon: '🏠',
+        title: 'Housing Costs Are Too High',
+        desc: `Housing is ${((housing/net)*100).toFixed(1)}% of your income — above the 30% rule. Consider a flatmate, moving to a lower-cost area, or negotiating your rent to bring this under R ${(net*0.3).toFixed(2)}/month.`,
+        saving: 'high', savingLabel: `Potential save: R ${(housing - net*0.3).toFixed(2)}/month`
+      });
+    }
+
+    // High debt
+    const debtAmt = catTotals['Debt Repayment'] || 0;
+    if (net > 0 && (debtAmt / net) > 0.3) {
+      recs.push({
+        priority: 'high', icon: '💳',
+        title: 'Debt Repayments Are Consuming Income',
+        desc: `Debt payments are ${((debtAmt/net)*100).toFixed(1)}% of income. Focus on paying off the highest-interest debt first (avalanche method) to reduce total interest paid and free up cash flow faster.`,
+        saving: 'high', savingLabel: 'Debt avalanche strategy recommended'
+      });
+    }
+
+    // Optional expenses
+    const optionalItems = expenses.filter(e => e.pri === 'optional');
+    const optionalTotal = optionalItems.reduce((s,e) => s+e.amt, 0);
+    if (optionalTotal > 0) {
+      recs.push({
+        priority: surplus < 0 ? 'high' : 'medium', icon: '🎯',
+        title: `R ${optionalTotal.toFixed(2)} in Optional Expenses Identified`,
+        desc: `You marked ${optionalItems.length} expense${optionalItems.length>1?'s':''} as optional totalling ${fmt(optionalTotal)}: ${optionalItems.map(e=>e.desc).join(', ')}. Cutting these would immediately improve your surplus.`,
+        saving: surplus < 0 ? 'high' : 'medium', savingLabel: `Cutting all: +R ${optionalTotal.toFixed(2)}/month`
+      });
+    }
+
+    // Subscriptions / lifestyle
+    const lifestyle = catTotals['Lifestyle'] || 0;
+    if (net > 0 && (lifestyle / net) > 0.1) {
+      recs.push({
+        priority: 'medium', icon: '📱',
+        title: 'Review Lifestyle & Subscriptions',
+        desc: `Lifestyle spending is ${((lifestyle/net)*100).toFixed(1)}% of income. Audit streaming services, gym memberships and recurring subscriptions. Cancelling even 2–3 unused ones can free up R 300–600/month.`,
+        saving: 'medium', savingLabel: 'Typical save: R 300–600/month'
+      });
+    }
+
+    // No savings category
+    if (!(catTotals['Savings'])) {
+      recs.push({
+        priority: 'high', icon: '🏦',
+        title: 'No Savings Line Item Found',
+        desc: `Pay yourself first! Add a dedicated "Savings" expense. Automate a transfer on payday so it happens before you spend. Even R 500/month compounded adds up significantly.`,
+        saving: 'medium', savingLabel: 'Start with R 500–1000/month'
+      });
+    }
+
+    // Emergency fund
+    if (savingsRate < 20 || surplus < net * 0.1) {
+      recs.push({
+        priority: 'low', icon: '🛡️',
+        title: 'Build a 3–6 Month Emergency Fund',
+        desc: `Your emergency fund target is R ${(totalExpensesForEmergency(expenses, debts) * 3).toFixed(2)} (3 months). This protects you from job loss or unexpected costs. Keep it in a high-yield savings account.`,
+        saving: 'low', savingLabel: 'Long-term financial security'
+      });
+    }
+
+    // Good surplus
+    if (surplus >= net * 0.2 && savingsRate >= 20) {
+      recs.push({
+        priority: 'low', icon: '🌟',
+        title: 'Strong Financial Position — Consider Investing',
+        desc: `With a ${savingsRate.toFixed(1)}% savings rate you are ahead of most. Consider investing your surplus in a Tax-Free Savings Account (TFSA), unit trusts, or ETFs to grow your wealth beyond cash savings.`,
+        saving: 'low', savingLabel: 'Wealth building opportunity'
+      });
+    }
+
+    // No recs
+    if (recs.length === 0) {
+      recs.push({
+        priority: 'low', icon: '✅',
+        title: 'Your Budget Looks Healthy',
+        desc: 'All spending categories appear within recommended ranges. Keep monitoring monthly and review when income or expenses change.',
+        saving: 'low', savingLabel: 'Maintain & review regularly'
+      });
+    }
+
+    const list = document.getElementById('rec-list');
+    list.innerHTML = recs.map(r => `
+      <div class="rec-item priority-${r.priority}">
+        <div class="rec-icon">${r.icon}</div>
+        <div>
+          <div class="rec-title">${r.title}</div>
+          <div class="rec-desc">${r.desc}</div>
+          <span class="rec-saving ${r.saving}">${r.savingLabel}</span>
+        </div>
+      </div>
+    `).join('');
+
+    document.getElementById('rec-summary').innerHTML =
+      `Found <strong style="color:var(--accent)">${recs.length} insight${recs.length>1?'s':''}</strong> for your budget. ` +
+      (surplus < 0
+        ? `<strong style="color:var(--bad)">You are over-budget by ${fmt(Math.abs(surplus))}/month.</strong> Focus on the high-priority items below immediately.`
+        : `Your monthly surplus is <strong style="color:var(--good)">${fmt(surplus)}</strong>. Review the suggestions below to optimise further.`);
+  }
+
+  function totalExpensesForEmergency(expenses, debts) {
+    return expenses.reduce((s,e)=>s+e.amt,0) + debts.reduce((s,d)=>s+d.payment,0);
+  }
+
+  function renderDebtPlan(debts, surplus) {
+    const container = document.getElementById('debt-plan-content');
+    if (debts.length === 0) {
+      container.innerHTML = '<p style="color:var(--muted);font-size:.85rem">No debts entered. Add debts in section 03 to see your payoff plan.</p>';
+      return;
+    }
+
+    // Sort by interest rate descending (avalanche)
+    const sorted = [...debts].sort((a,b) => b.interest - a.interest);
+    const totalBalance  = debts.reduce((s,d)=>s+d.balance,0);
+    const totalPayments = debts.reduce((s,d)=>s+d.payment,0);
+
+    let html = `
+      <div class="debt-strategy">
+        <h4>💳 Debt Avalanche Strategy (Recommended)</h4>
+        <p>Pay the <strong>minimum on all debts</strong>, then throw any extra money at the <strong>highest-interest debt first</strong>. This minimises total interest paid. Your total debt: <strong style="color:var(--bad)">${fmt(totalBalance)}</strong>. Total monthly debt payments: <strong>${fmt(totalPayments)}</strong>.</p>
+      </div>
+      <table class="breakdown-table">
+        <thead>
+          <tr>
+            <th>Debt</th>
+            <th>Balance</th>
+            <th>Monthly Payment</th>
+            <th>Interest Rate</th>
+            <th>Est. Payoff</th>
+            <th>Priority</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    sorted.forEach((d, i) => {
+      const monthlyRate = d.interest / 100 / 12;
+      let months = Infinity;
+      if (monthlyRate > 0 && d.payment > d.balance * monthlyRate) {
+        months = Math.ceil(-Math.log(1 - (d.balance * monthlyRate) / d.payment) / Math.log(1 + monthlyRate));
+      } else if (monthlyRate === 0 && d.payment > 0) {
+        months = Math.ceil(d.balance / d.payment);
+      }
+      const payoffStr = months === Infinity ? 'Payment too low' : months <= 12 ? `${months} months` : `${Math.floor(months/12)}y ${months%12}m`;
+      const priorityLabel = i === 0 ? '🔥 Attack first' : i === 1 ? '⬆ Next target' : '→ Maintain minimum';
+      const priorityColor = i === 0 ? 'var(--bad)' : i === 1 ? 'var(--warn)' : 'var(--muted)';
+
+      html += `
+        <tr>
+          <td>${d.name}</td>
+          <td style="color:var(--bad)">${fmt(d.balance)}</td>
+          <td>${fmt(d.payment)}</td>
+          <td style="color:${d.interest>15?'var(--bad)':d.interest>8?'var(--warn)':'var(--good)'}">${d.interest}%</td>
+          <td style="color:var(--muted);font-size:.78rem">${payoffStr}</td>
+          <td style="color:${priorityColor};font-size:.78rem">${priorityLabel}</td>
+        </tr>
+      `;
+    });
+
+    html += '</tbody></table>';
+
+    if (surplus > 0) {
+      html += `
+        <div style="margin-top:16px; padding:16px; background:rgba(74,240,200,0.06); border:1px solid rgba(74,240,200,0.2); border-radius:10px; font-size:.82rem; line-height:1.7;">
+          <strong style="color:var(--good)">💡 Extra Payment Tip:</strong> You have a monthly surplus of <strong>${fmt(surplus)}</strong>. 
+          Putting even half of this (${fmt(surplus/2)}) extra onto <em>${sorted[0].name}</em> could significantly shorten your payoff timeline.
+        </div>
+      `;
+    }
+
+    container.innerHTML = html;
+  }
+
+  function switchTab(tab, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+  }
+
+  function loadSample() {
+    document.getElementById('grossSalary').value  = 35000;
+    document.getElementById('taxDeduction').value = 6200;
+    document.getElementById('otherIncome').value  = 1500;
+    liveCalc();
+
+    document.getElementById('expenseRows').innerHTML = '';
+    document.getElementById('debtRows').innerHTML = '';
+    expenseCount = 0; debtCount = 0;
+
+    const sampleExpenses = [
+      ['Rent',                'Housing',          9500, 'essential'],
+      ['Electricity & Water', 'Housing',           900, 'essential'],
+      ['Groceries',           'Food & Groceries', 3200, 'essential'],
+      ['Car Insurance',       'Insurance',         850, 'essential'],
+      ['Petrol',              'Transport',        1800, 'essential'],
+      ['Medical Aid',         'Medical',          1500, 'essential'],
+      ['Netflix',             'Lifestyle',         219, 'optional'],
+      ['DSTV',                'Lifestyle',         869, 'optional'],
+      ['Gym Membership',      'Lifestyle',         499, 'optional'],
+      ['Eating Out',          'Lifestyle',        1200, 'optional'],
+      ['Airtime & Data',      'Lifestyle',         600, 'medium'],
+      ['Savings',             'Savings',          1000, 'essential'],
+      ['School Fees',         'Education',        2200, 'essential'],
+    ];
+
+    sampleExpenses.forEach(([d,c,a,p]) => addRow(d,c,a,p));
+    addDebtRow('Vehicle Finance', 85000, 1950, 11.5);
+    addDebtRow('Credit Card', 22000, 1100, 21.5);
+    addDebtRow('Personal Loan', 15000, 850, 17);
+
+    calculate();
+  }
+
+  // Init with 3 blank rows
+  addRow('', 'Housing', '', 'essential');
+  addRow('', 'Food & Groceries', '', 'essential');
+  addRow('', 'Transport', '', 'essential');
+</script>
+</body>
+</html>
